@@ -8,3 +8,6 @@ set_target_properties(Catch2::Catch2 PROPERTIES
 
 add_executable(rxcpp rx.cpp)
 target_link_libraries(rxcpp Catch2::Catch2)
+
+add_executable(insideobject insideobject.cpp)
+target_link_libraries(insideobject Catch2::Catch2)

@@ -1,6 +1,8 @@
 // Let Catch provide main():
 #define CATCH_CONFIG_MAIN
 
+// practices for C++ Reactive Programming 
+
 #include <catch.hpp>
 #include <thread>
 
@@ -48,7 +50,16 @@ TEST_CASE("Passing arguments into a thread", "[thread]" ) {
         t.join();
     }
 
-    SECTION("local variable is not valid for the thread") {
+    SECTION("the stack variables are copied into the thread, safe!") {
+        char buf[512];
+        const char* hello = "Hello World\n";
+        std::strcpy(buf, hello);
+
+        std::thread t(thread_proc, std::string(buf));
+        t.detach();
+    }
+
+    SECTION("an implicit conversion from char to string may not happen, undefined behavior!!!") {
         char buf[512];
         const char* hello = "Hello World\n";
         std::strcpy(buf, hello);
@@ -85,3 +96,36 @@ TEST_CASE("Using Lambdas", "[thread]") {
     });
 }
 
+void function1() 
+{ 
+    std::cout << "function1()\n"; 
+} 
+ 
+void function2() 
+{ 
+    std::cout << "function2()\n"; 
+} 
+
+TEST_CASE("Transfering ownership", "[thread]") {
+    std::thread t1(function1); 
+     
+    // Ownership of t1 is transferred to t2 
+    std::thread t2 = std::move(t1);
+
+    t1 = std::thread(function2); 
+
+     // thread instance Created without any associated thread execution 
+    std::thread t3; 
+     
+    // Ownership of t2 is transferred to t3 
+    t3 = std::move(t2); 
+
+    // crash !!!
+    // the instance t1 is already associated with a running function (function2)
+    // std::terminate() is called to terminate the program
+    // t1 = std::move(t3);
+
+    // No need to join t2, no longer has any associated thread of execution 
+    if (t1.joinable())  t1.join(); 
+    if (t3.joinable())  t3.join(); 
+}
