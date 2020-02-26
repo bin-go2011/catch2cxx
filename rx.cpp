@@ -5,6 +5,9 @@
 
 #include <catch.hpp>
 #include <thread>
+#include <mutex>
+#include <future>
+#include <numeric>
 
 void *ptr = nullptr;
 
@@ -128,4 +131,100 @@ TEST_CASE("Transfering ownership", "[thread]") {
     // No need to join t2, no longer has any associated thread of execution 
     if (t1.joinable())  t1.join(); 
     if (t3.joinable())  t3.join(); 
+}
+
+std::mutex m; 
+
+TEST_CASE("Resource Acquisition Is Initialization (RAII)", "[thread]") {
+    std::vector<std::thread> threads;  
+    for (int i = 1; i < 10; ++i) 
+    { 
+        threads.push_back(std::thread( [i]() { 
+            std::lock_guard<std::mutex> local_lock(m); 
+            std::cout << "Thread #" << i << std::endl; 
+        })); 
+    }      
+    std::for_each(threads.begin(), threads.end(), [](std::thread &t) { 
+        t.join(); 
+    }); 
+}
+
+// Function to calculate the sum of elements in an integer vector 
+int calc_sum(std::vector<int> v) 
+{ 
+    int sum = std::accumulate(v.begin(), v.end(), 0); 
+    return sum; 
+} 
+
+TEST_CASE("Future and Promise", "[thread]") {
+
+    SECTION("std::packaged_task") {
+        // Creating a packaged_task encapsulates a function 
+        std::packaged_task<int(std::vector<int>)> task(calc_sum); 
+        
+        // Fetch associated future from packaged_task 
+        std::future<int> result = task.get_future(); 
+    
+        std::vector<int> nums{1,2,3,4,5,6,7,8,9,10}; 
+        
+        // Pass packaged_task to thread to run asynchronously 
+        // The explicit std::move() is used since the packaged_task instances cannot be copied. 
+        // This is because it is a resource handle and is responsible for whatever resources its task may own.
+        std::thread t(std::move(task), std::move(nums)); 
+        
+        t.join();
+        // Fetch the result of packaged_task, the value returned by calc_sum() 
+        int sum = result.get(); 
+        
+        std::cout << "Sum = " << sum << std::endl; 
+    }
+
+    SECTION("std::packaged_task with lambda") {
+        // Using Lambda
+        std::packaged_task<int(std::vector<int>)> task([](std::vector<int> v) { 
+                return std::accumulate(v.begin(), v.end(), 0); 
+        });
+
+        // Fetch associated future from packaged_task 
+        std::future<int> result = task.get_future(); 
+    
+        std::vector<int> nums{1,2,3,4,5,6,7,8,9,10}; 
+        
+        // Pass packaged_task to thread to run asynchronously 
+        // The explicit std::move() is used since the packaged_task instances cannot be copied. 
+        // This is because it is a resource handle and is responsible for whatever resources its task may own.
+        std::thread t(std::move(task), std::move(nums)); 
+        
+        t.join();
+        // Fetch the result of packaged_task, the value returned by calc_sum() 
+        int sum = result.get(); 
+        
+        std::cout << "Sum = " << sum << std::endl; 
+    }
+
+    SECTION("std::async") {
+        std::vector<int> nums{1,2,3,4,5,6,7,8,9,10}; 
+     
+        // task launch using std::async 
+        std::future<int> result(std::async(std::launch::async, calc_sum,  std::move(nums))); 
+            
+        // Fetch the result of async, the value returned by calc_sum() 
+        int sum = result.get(); 
+            
+        std::cout << "Sum = " << sum << std::endl; 
+    }
+
+	SECTION("std::async with lambda") {
+		std::vector<int> nums{ 1,2,3,4,5,6,7,8,9,10 };
+
+		// Fetch associated future from async
+		std::future<int> result(async([](std::vector<int> v) {
+			return std::accumulate(v.begin(), v.end(), 0);
+		}, std::move(nums)));
+
+		// Fetch the result of async, the value returned by calc_sum() 
+		int sum = result.get();
+
+		std::cout << "Sum = " << sum << std::endl;
+	}
 }
