@@ -214,17 +214,17 @@ TEST_CASE("Future and Promise", "[thread]") {
         std::cout << "Sum = " << sum << std::endl; 
     }
 
-	SECTION("std::async with lambda") {
-		std::vector<int> nums{ 1,2,3,4,5,6,7,8,9,10 };
+    SECTION("std::async with lambda") {
+        std::vector<int> nums{ 1,2,3,4,5,6,7,8,9,10 };
 
-		// Fetch associated future from async
-		std::future<int> result(async([](std::vector<int> v) {
-			return std::accumulate(v.begin(), v.end(), 0);
-		}, std::move(nums)));
+        // Fetch associated future from async
+        std::future<int> result(async([](std::vector<int> v) {
+            return std::accumulate(v.begin(), v.end(), 0);
+        }, std::move(nums)));
 
-		// Fetch the result of async, the value returned by calc_sum() 
-		int sum = result.get();
+        // Fetch the result of async, the value returned by calc_sum() 
+        int sum = result.get();
 
-		std::cout << "Sum = " << sum << std::endl;
-	}
+        std::cout << "Sum = " << sum << std::endl;
+    }
 }
